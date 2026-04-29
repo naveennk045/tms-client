@@ -213,6 +213,44 @@ button {
   font-size: var(--font-subtitle);
 }
 
+/* TMS board: compact top bar (more room for order grid) */
+.app-shell-wide .tms-header.page-head {
+  margin-bottom: 0.45rem;
+}
+
+.app-shell-wide .tms-header.page-head-row {
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+}
+
+.app-shell-wide .tms-header .tms-brand {
+  margin: 0;
+  font-size: clamp(1.45rem, 4.5vw, 2.65rem);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.05;
+  letter-spacing: 0.14em;
+  text-transform: none;
+  color: var(--text-primary);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+.app-shell-wide .tms-header .action-row {
+  gap: 0.35rem;
+}
+
+.app-shell-wide .tms-header .btn {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.8rem;
+}
+
+.app-shell-wide .tms-header .btn-voice {
+  padding: 0.24rem 0.5rem;
+}
+
+.app-shell-wide .tms-header .voice-on {
+  font-size: 0.75rem;
+}
+
 .panel {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -286,8 +324,7 @@ button {
   font-weight: 600;
 }
 
-.store-list,
-.line-list {
+.store-list {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -311,10 +348,178 @@ button {
   font-size: 0.9rem;
 }
 
-.tms-grid {
+/* TMS: 3-column grid of order tiles */
+.tms-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--space-md);
+  gap: 0.55rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.55rem;
+}
+
+.tms-list__item {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+
+.tms-tile {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  padding: 0.5rem 0.55rem 0.45rem;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(240, 144, 35, 0.35);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 250, 240, 0.88) 100%);
+  box-shadow: var(--shadow-sm);
+  transition:
+    box-shadow var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.tms-tile:hover {
+  box-shadow: var(--shadow-md);
+  border-color: rgba(240, 144, 35, 0.55);
+}
+
+.tms-tile--pickup {
+  border-color: rgba(61, 122, 79, 0.45);
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.95) 0%, rgba(232, 245, 227, 0.9) 100%);
+}
+
+.tms-tile--flash {
+  border-color: var(--gold-accent);
+  box-shadow: var(--shadow-md), 0 0 0 2px rgba(223, 94, 8, 0.2);
+  animation: tms-tile-flash 0.75s ease-out 2;
+}
+
+@keyframes tms-tile-flash {
+  0%,
+  100% {
+    box-shadow: var(--shadow-sm);
+  }
+  50% {
+    box-shadow: var(--shadow-lg), 0 0 0 3px rgba(223, 94, 8, 0.28);
+  }
+}
+
+.tms-tile__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(240, 144, 35, 0.22);
+}
+
+.tms-tile__kot {
+  font-size: clamp(1.05rem, 2.8vw, 1.45rem);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.03em;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.tms-tile__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: flex-end;
+}
+
+.tms-badge {
+  font-size: 0.62rem;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.18rem 0.42rem;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.tms-badge--pickup {
+  background: var(--ready);
+  color: var(--text-on-dark);
+}
+
+.tms-badge--kitchen {
+  border: 1px solid var(--prep);
+  color: var(--prep);
+  background: rgba(223, 94, 8, 0.08);
+}
+
+.tms-tile__lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tms-tile__line {
+  display: grid;
+  grid-template-columns: 1fr auto minmax(3.2rem, auto);
+  gap: 0.35rem 0.45rem;
+  align-items: baseline;
+  font-size: var(--font-sm);
+  line-height: var(--line-height-tight);
+  padding: 0.18rem 0;
+  border-bottom: 1px dotted rgba(122, 133, 122, 0.35);
+}
+
+.tms-tile__line:last-child {
+  border-bottom: none;
+}
+
+.tms-tile__name {
+  min-width: 0;
+  font-weight: var(--font-weight-medium);
+  color: var(--card-text);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.tms-tile__qty {
+  font-weight: var(--font-weight-bold);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.tms-tile__st {
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-semibold);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-align: right;
+}
+
+.tms-tile__line--ready .tms-tile__name {
+  color: var(--gold-dark);
+  font-weight: var(--font-weight-semibold);
+}
+
+.tms-tile__line--ready .tms-tile__st {
+  color: var(--gold-dark);
+}
+
+.tms-tile__more {
+  margin: 0.35rem 0 0;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--muted);
+  font-style: italic;
 }
 
 /* Fire TV Silk-only layout tuning */
@@ -336,6 +541,15 @@ button {
   margin-bottom: 0.45rem;
 }
 
+:root[data-browser="silk"] .app-shell-wide .tms-header.page-head {
+  margin-bottom: 0.3rem;
+}
+
+:root[data-browser="silk"] .app-shell-wide .tms-header .tms-brand {
+  font-size: clamp(1.35rem, 3.8vw, 2.1rem);
+  letter-spacing: 0.12em;
+}
+
 :root[data-browser="silk"] .page-head-row {
   gap: 0.45rem;
   align-items: center;
@@ -355,18 +569,27 @@ button {
   gap: 0.4rem;
 }
 
-:root[data-browser="silk"] .tms-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
+:root[data-browser="silk"] .tms-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem 0.45rem;
+  padding-top: 0.4rem;
 }
 
-:root[data-browser="silk"] .tms-card {
-  border-radius: 12px;
-  padding: 0.6rem 0.65rem;
+:root[data-browser="silk"] .tms-tile {
+  padding: 0.4rem 0.45rem 0.35rem;
 }
 
-:root[data-browser="silk"] .line-row {
-  padding: 0.3rem 0;
+:root[data-browser="silk"] .tms-tile__kot {
+  font-size: clamp(0.95rem, 2.2vw, 1.2rem);
+}
+
+:root[data-browser="silk"] .tms-tile__line {
+  font-size: 0.78rem;
+  grid-template-columns: 1fr auto minmax(2.75rem, auto);
+}
+
+:root[data-browser="silk"] .tms-tile__st {
+  font-size: 0.62rem;
 }
 
 :root[data-browser="silk"] .btn {
@@ -391,76 +614,9 @@ button {
 }
 
 @media (min-width: 1600px) {
-  :root[data-browser="silk"] .tms-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.7rem;
+  :root[data-browser="silk"] .tms-list {
+    gap: 0.45rem 0.55rem;
   }
-}
-
-.tms-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: var(--space-md);
-  box-shadow: var(--shadow-md);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.tms-card.flash {
-  border-color: var(--ready);
-  box-shadow: 0 0 24px rgba(61, 122, 79, 0.35);
-}
-
-.tms-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-xs);
-  margin-bottom: var(--space-sm);
-}
-
-.kot-code {
-  font-size: var(--font-kot);
-  font-weight: 800;
-  letter-spacing: 0.03em;
-}
-
-.badge-ready,
-.badge-kitchen {
-  font-size: 0.75rem;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 0.2rem 0.55rem;
-  text-transform: uppercase;
-}
-
-.badge-ready {
-  background: var(--ready);
-  color: var(--text-on-dark);
-}
-
-.badge-kitchen {
-  border: 1px solid var(--prep);
-  color: var(--prep);
-}
-
-.line-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--space-sm);
-  border-top: 1px solid var(--border);
-  padding: 0.55rem 0;
-}
-
-.line-ready .line-name {
-  color: var(--ready);
-  font-weight: 700;
-}
-
-.line-status {
-  color: var(--muted);
-  font-size: 0.92rem;
 }
 
 /* Mobile */
@@ -478,8 +634,10 @@ button {
     padding: var(--space-lg);
   }
 
-  .tms-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  .tms-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem 0.75rem;
+    padding-top: 0.5rem;
   }
 }
 
@@ -496,15 +654,31 @@ button {
     padding: 2.25rem;
   }
 
-  .panel,
-  .tms-card {
+  .panel {
     border-width: 2px;
     padding: 1.4rem;
   }
 
-  .tms-grid {
-    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-    gap: 1.35rem;
+  .tms-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem 0.85rem;
+    padding-top: 0.55rem;
+  }
+
+  .tms-tile {
+    padding: 0.55rem 0.65rem 0.5rem;
+  }
+
+  .tms-tile__kot {
+    font-size: clamp(1.15rem, 1.8vw, 1.65rem);
+  }
+
+  .tms-tile__line {
+    font-size: var(--font-base);
+  }
+
+  .tms-tile__st {
+    font-size: 0.72rem;
   }
 
   .btn {
@@ -519,13 +693,8 @@ button {
     --font-kot: 1.8rem;
   }
 
-  :root[data-browser="silk"] .tms-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-  }
-
-  :root[data-browser="silk"] .tms-card {
-    border-width: 1px;
-    padding: 0.75rem;
+  :root[data-browser="silk"] .tms-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.45rem 0.65rem;
   }
 }
