@@ -187,8 +187,7 @@ button {
 }
 
 .app-shell-wide {
-  max-width: min(100%, 1920px);
-  width: 100%;
+  max-width: 1880px;
 }
 
 .page-head {
@@ -318,6 +317,45 @@ button {
   gap: var(--space-md);
 }
 
+/* Fire TV Silk-only layout tuning */
+:root[data-browser="silk"] {
+  --font-base: 0.95rem;
+  --font-title: 1.6rem;
+  --font-kot: 1.85rem;
+}
+
+:root[data-browser="silk"] .app-shell-wide {
+  max-width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+:root[data-browser="silk"] .tms-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+:root[data-browser="silk"] .tms-card {
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+:root[data-browser="silk"] .line-row {
+  padding: 0.4rem 0;
+}
+
+@media (min-width: 1280px) {
+  :root[data-browser="silk"] .tms-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1600px) {
+  :root[data-browser="silk"] .tms-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 .tms-card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -404,117 +442,49 @@ button {
   }
 }
 
-/* Large TV / 42"+ : three columns, dense spacing, slightly smaller type */
+/* 42-inch TV */
 @media (min-width: 1920px) {
   :root {
-    --font-base: 0.95rem;
-    --font-title: 1.25rem;
-    --font-subtitle: 0.8rem;
-    --font-kot: 1.35rem;
+    --font-base: 1.375rem;
+    --font-title: 2.4rem;
+    --font-subtitle: 1.2rem;
+    --font-kot: 3rem;
   }
 
-  .app-shell-wide {
-    max-width: none;
-    padding: 0.5rem 0.65rem;
+  .app-shell {
+    padding: 2.25rem;
   }
 
-  .app-shell-wide .page-head {
-    margin-bottom: 0.4rem;
-  }
-
-  .app-shell-wide .page-head-row {
-    gap: 0.35rem 0.5rem;
-  }
-
-  .app-shell-wide .page-title {
-    font-size: var(--font-title);
-    line-height: var(--line-height-tight);
-  }
-
-  .app-shell-wide .page-subtitle {
-    margin-top: 0.15rem;
-    font-size: var(--font-subtitle);
-    line-height: var(--line-height-tight);
-  }
-
-  .app-shell-wide .action-row {
-    gap: 0.35rem;
-  }
-
-  .app-shell-wide .btn {
-    padding: 0.3rem 0.55rem;
-    font-size: var(--font-sm);
-    border-radius: var(--radius-sm);
-  }
-
-  .app-shell-wide .error-box {
-    margin-bottom: 0.35rem;
-    padding: 0.35rem 0.5rem;
-    font-size: var(--font-sm);
-  }
-
-  .app-shell-wide .muted-line {
-    margin: 0.25rem 0 0;
-    font-size: var(--font-sm);
-  }
-
-  .tms-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.45rem;
-    align-items: start;
-  }
-
+  .panel,
   .tms-card {
-    border-width: 1px;
-    border-radius: var(--radius-md);
-    padding: 0.4rem 0.5rem;
-    box-shadow: var(--shadow-sm);
-  }
-
-  .tms-card-head {
-    margin-bottom: 0.25rem;
-    gap: 0.25rem;
-  }
-
-  .kot-code {
-    font-size: var(--font-kot);
-    letter-spacing: 0.02em;
-  }
-
-  .badge-ready,
-  .badge-kitchen {
-    font-size: 0.62rem;
-    padding: 0.12rem 0.35rem;
-  }
-
-  .line-row {
-    padding: 0.22rem 0;
-    gap: 0.35rem;
-    border-top-width: 1px;
-  }
-
-  .line-name {
-    font-size: var(--font-sm);
-    line-height: var(--line-height-tight);
-  }
-
-  .line-status {
-    font-size: var(--font-xs);
-    flex-shrink: 0;
-  }
-
-  .app-shell-wide .voice-on {
-    font-size: var(--font-sm);
-  }
-}
-
-/* Ultra-wide / 4K: same 3 columns, use horizontal space; optional slightly tighter gap */
-@media (min-width: 2560px) {
-  .app-shell-wide {
-    padding: 0.45rem 0.55rem;
+    border-width: 2px;
+    padding: 1.4rem;
   }
 
   .tms-grid {
-    gap: 0.4rem;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 1.35rem;
+  }
+
+  .btn {
+    padding: 0.7rem 1.2rem;
+    border-radius: 12px;
+  }
+
+  :root[data-browser="silk"] {
+    --font-base: 1.05rem;
+    --font-title: 1.9rem;
+    --font-subtitle: 1rem;
+    --font-kot: 2.2rem;
+  }
+
+  :root[data-browser="silk"] .tms-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+
+  :root[data-browser="silk"] .tms-card {
+    border-width: 1px;
+    padding: 0.95rem;
   }
 }
