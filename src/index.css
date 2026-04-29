@@ -348,30 +348,35 @@ button {
   font-size: 0.9rem;
 }
 
-/* TMS: order grid — at most 4 columns; all orders still listed (page scrolls) */
+/* TMS: multi-column flow (max 4 cols) — variable-height tiles pack top-to-bottom per column
+   so short orders do not leave row-sized gaps like a uniform CSS grid row would. */
 .tms-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.55rem;
-  border-top: 1px solid var(--border);
   padding-top: 0.55rem;
+  border-top: 1px solid var(--border);
+  column-count: 1;
+  column-gap: 0.55rem;
+  column-fill: balance;
 }
 
 .tms-list__item {
-  margin: 0;
+  margin: 0 0 0.55rem;
   padding: 0;
   list-style: none;
   min-width: 0;
+  display: block;
+  width: 100%;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-column-break-inside: avoid;
 }
 
 .tms-tile {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  height: 100%;
   padding: 0.5rem 0.55rem 0.45rem;
   border-radius: var(--radius-md);
   border: 1px solid rgba(240, 144, 35, 0.35);
@@ -570,8 +575,12 @@ button {
 }
 
 :root[data-browser="silk"] .tms-list {
-  gap: 0.4rem 0.45rem;
+  column-gap: 0.45rem;
   padding-top: 0.4rem;
+}
+
+:root[data-browser="silk"] .tms-list__item {
+  margin-bottom: 0.45rem;
 }
 
 :root[data-browser="silk"] .tms-tile {
@@ -624,14 +633,16 @@ button {
 /* 2 columns */
 @media (min-width: 640px) {
   .tms-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-count: 2;
+    column-gap: 0.65rem;
   }
 }
 
-/* 3 columns (never more than 4 total) */
+/* 3 columns (never more than 4) */
 @media (min-width: 1040px) {
   .tms-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-count: 3;
+    column-gap: 0.7rem;
   }
 }
 
@@ -641,7 +652,7 @@ button {
   }
 
   .tms-list {
-    gap: 0.5rem 0.75rem;
+    column-gap: 0.75rem;
     padding-top: 0.5rem;
   }
 }
@@ -649,7 +660,8 @@ button {
 /* 4 columns — maximum */
 @media (min-width: 1280px) {
   .tms-list {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    column-count: 4;
+    column-gap: 0.8rem;
   }
 }
 
@@ -672,7 +684,7 @@ button {
   }
 
   .tms-list {
-    gap: 0.55rem 0.85rem;
+    column-gap: 0.85rem;
     padding-top: 0.55rem;
   }
 
@@ -705,6 +717,6 @@ button {
   }
 
   :root[data-browser="silk"] .tms-list {
-    gap: 0.45rem 0.65rem;
+    column-gap: 0.65rem;
   }
 }
