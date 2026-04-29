@@ -348,7 +348,7 @@ button {
   font-size: 0.9rem;
 }
 
-/* TMS: 3-column grid of order tiles */
+/* TMS: order grid — at most 4 columns; all orders still listed (page scrolls) */
 .tms-list {
   list-style: none;
   margin: 0;
@@ -570,7 +570,6 @@ button {
 }
 
 :root[data-browser="silk"] .tms-list {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.4rem 0.45rem;
   padding-top: 0.4rem;
 }
@@ -613,12 +612,6 @@ button {
   }
 }
 
-@media (min-width: 1600px) {
-  :root[data-browser="silk"] .tms-list {
-    gap: 0.45rem 0.55rem;
-  }
-}
-
 /* Mobile */
 @media (max-width: 767px) {
   :root {
@@ -628,16 +621,35 @@ button {
   }
 }
 
-/* Laptop */
+/* 2 columns */
+@media (min-width: 640px) {
+  .tms-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 3 columns (never more than 4 total) */
+@media (min-width: 1040px) {
+  .tms-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 1024px) {
   .app-shell {
     padding: var(--space-lg);
   }
 
   .tms-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.5rem 0.75rem;
     padding-top: 0.5rem;
+  }
+}
+
+/* 4 columns — maximum */
+@media (min-width: 1280px) {
+  .tms-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -660,7 +672,6 @@ button {
   }
 
   .tms-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.55rem 0.85rem;
     padding-top: 0.55rem;
   }
@@ -694,7 +705,6 @@ button {
   }
 
   :root[data-browser="silk"] .tms-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.45rem 0.65rem;
   }
 }
