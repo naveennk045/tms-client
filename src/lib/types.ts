@@ -17,6 +17,8 @@ export interface TmsLine {
   id: number;
   item_name: string;
   quantity: number;
+  items_need_be_ready?: number;
+  items_need_be_collected?: number;
   order_status: OrderItemStatus;
 }
 
@@ -25,7 +27,8 @@ export interface TmsToken {
   order_id: string;
   created_at: string;
   lines: TmsLine[];
-  flags: TmsTokenFlags;
+  /** Omitted on older servers; derive from lines when missing. */
+  flags?: TmsTokenFlags;
 }
 
 export interface TmsSnapshotPayload {
@@ -53,7 +56,10 @@ export interface ItemStatusPayload {
   order_id: string;
   kot_code: string;
   item_name: string;
+  /** Batch size for this event, not the line total. */
   quantity: number;
+  items_need_be_ready?: number;
+  items_need_be_collected?: number;
   order_status: OrderItemStatus;
 }
 

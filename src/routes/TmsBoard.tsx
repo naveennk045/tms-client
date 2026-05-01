@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { fetchTmsSnapshot, tmsEventSourceUrl } from "../lib/api";
-import { statusLabel } from "../lib/status";
+import {
+  lineItemsNeedCollected,
+  lineItemsNeedReady,
+  resolveTmsTokenFlags,
+  statusLabel,
+} from "../lib/status";
 import { getXStoreIdHeaderValue, readStoredStore } from "../lib/storeContext";
 import { primeSpeechSynthesis, speakTmsAnnouncement } from "../lib/speech";
 import type { TmsAnnouncePayload, TmsSnapshotPayload, TmsToken, WsEnvelope } from "../lib/types";
@@ -67,6 +72,8 @@ export default function TmsBoard() {
         if (msg.type === "SNAPSHOT" && msg.payload && "tokens" in msg.payload) {
           applySnapshot(msg.payload);
         } else if (msg.type === "BOARD_REFRESH" || msg.type === "ITEM_STATUS_CHANGED") {
+          const sid = (msg.payload as { store_id?: number } | undefined)?.store_id;
+          if (sid !== undefined && sid !== stored.storeId) return;
           void loadSnapshot();
         } else if (msg.type === "TMS_ANNOUNCE") {
           const p = msg.payload as TmsAnnouncePayload;
@@ -179,8 +186,10 @@ export default function TmsBoard() {
 const MAX_ITEM_LINES = 10;
 
 function OrderTile({ token, flash }: Readonly<{ token: TmsToken; flash: boolean }>) {
-  const ready = token.flags.has_ready_for_pickup;
-  const kitchen = token.flags.has_in_kitchen;
+  const { has_ready_for_pickup: ready, has_in_kitchen: kitchen } = resolveTmsTokenFlags(
+    token.lines,
+    token.flags,
+  );
   const lines = token.lines;
   const visible = lines.slice(0, MAX_ITEM_LINES);
   const overflow = lines.length - visible.length;
@@ -199,13 +208,28 @@ function OrderTile({ token, flash }: Readonly<{ token: TmsToken; flash: boolean 
       </header>
 
       <ul className="tms-tile__lines">
-        {visible.map((line) => (
-          <li key={line.id} className={`tms-tile__line ${line.order_status === "READY" ? "tms-tile__line--ready" : ""}`}>
-            <span className="tms-tile__name">{line.item_name}</span>
-            <span className="tms-tile__qty">×{line.quantity}</span>
-            <span className="tms-tile__st">{statusLabel(line.order_status)}</span>
-          </li>
-        ))}
+        {visible.map((line) => {
+          const needReady = lineItemsNeedReady(line);
+          const needCollect = lineItemsNeedCollected(line);
+          const pickupHighlight = needCollect > 0 || line.order_status === "READY";
+          return (
+            <li
+              key={line.id}
+              className={`tms-tile__line ${pickupHighlight ? "tms-tile__line--ready" : ""}`}
+            >
+              <span className="tms-tile__name">
+                {line.item_name}
+                {(needReady > 0 || needCollect > 0) && (
+                  <span className="tms-tile__counters">
+                    Kitchen {needReady} · Counter {needCollect}
+                  </span>
+                )}
+              </span>
+              <span className="tms-tile__qty">×{line.quantity}</span>
+              <span className="tms-tile__st">{statusLabel(line.order_status)}</span>
+            </li>
+          );
+        })}
       </ul>
 
       {overflow > 0 && (

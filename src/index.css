@@ -495,6 +495,16 @@ button {
   overflow-wrap: anywhere;
 }
 
+.tms-tile__counters {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--muted);
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+}
+
 .tms-tile__qty {
   font-weight: var(--font-weight-medium);
   color: var(--text-secondary);

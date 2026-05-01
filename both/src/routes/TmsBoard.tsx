@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { fetchKioskConfig, fetchTmsSnapshot, tmsEventSourceUrl } from "../lib/api";
-import { statusLabel } from "../lib/status";
+import {
+  lineItemsNeedCollected,
+  lineItemsNeedReady,
+  resolveTmsTokenFlags,
+  statusLabel,
+} from "../lib/status";
 import {
   getXStoreIdHeaderValue,
   isStoreStillActive,
@@ -62,9 +67,9 @@ export default function TmsBoard() {
         const msg = JSON.parse(line) as WsEnvelope<TmsSnapshotPayload | TmsAnnouncePayload>;
         if (msg.type === "SNAPSHOT" && msg.payload && "tokens" in msg.payload) {
           applySnapshot(msg.payload as TmsSnapshotPayload);
-        } else if (msg.type === "BOARD_REFRESH") {
-          void loadSnapshot();
-        } else if (msg.type === "ITEM_STATUS_CHANGED") {
+        } else if (msg.type === "BOARD_REFRESH" || msg.type === "ITEM_STATUS_CHANGED") {
+          const sid = (msg.payload as { store_id?: number } | undefined)?.store_id;
+          if (sid !== undefined && sid !== stored.storeId) return;
           void loadSnapshot();
         } else if (msg.type === "TMS_ANNOUNCE") {
           const p = msg.payload as TmsAnnouncePayload;
@@ -154,8 +159,10 @@ export default function TmsBoard() {
 }
 
 function TokenCard({ token, flash }: { token: TmsToken; flash: boolean }) {
-  const ready = token.flags.has_ready_for_pickup;
-  const kitchen = token.flags.has_in_kitchen;
+  const { has_ready_for_pickup: ready, has_in_kitchen: kitchen } = resolveTmsTokenFlags(
+    token.lines,
+    token.flags,
+  );
   return (
     <article
       style={{
@@ -170,30 +177,40 @@ function TokenCard({ token, flash }: { token: TmsToken; flash: boolean }) {
         {kitchen && !ready && <span style={badgeKitchen}>In kitchen</span>}
       </div>
       <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-        {token.lines.map((line) => (
-          <li key={line.id} style={lineStyle(line.order_status)}>
-            <span>
-              {line.item_name} ×{line.quantity}
-            </span>
-            <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-              {statusLabel(line.order_status)}
-            </span>
-          </li>
-        ))}
+        {token.lines.map((line) => {
+          const needReady = lineItemsNeedReady(line);
+          const needCollect = lineItemsNeedCollected(line);
+          const pickupHighlight = needCollect > 0 || line.order_status === "READY";
+          return (
+            <li key={line.id} style={lineStyle(line.order_status, pickupHighlight)}>
+              <span>
+                {line.item_name} ×{line.quantity}
+                {(needReady > 0 || needCollect > 0) && (
+                  <span style={{ display: "block", fontSize: "0.78rem", color: "var(--muted)", marginTop: 2 }}>
+                    Kitchen {needReady} · Counter {needCollect}
+                  </span>
+                )}
+              </span>
+              <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
+                {statusLabel(line.order_status)}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     </article>
   );
 }
 
-function lineStyle(status: string): CSSProperties {
+function lineStyle(status: string, pickupHighlight: boolean): CSSProperties {
   return {
     display: "flex",
     justifyContent: "space-between",
     gap: "0.5rem",
     padding: "0.4rem 0",
     borderTop: "1px solid var(--border)",
-    color: status === "READY" ? "var(--ready)" : "var(--text)",
-    fontWeight: status === "READY" ? 600 : 400,
+    color: pickupHighlight || status === "READY" ? "var(--ready)" : "var(--text)",
+    fontWeight: pickupHighlight || status === "READY" ? 600 : 400,
   };
 }
 

@@ -1,4 +1,10 @@
-import type { KdsBoardPayload, KioskStoreRow, OrderItemStatus, TmsSnapshotPayload } from "./types";
+import type {
+  KdsBoardPayload,
+  KdsPatchLineResponse,
+  KioskStoreRow,
+  OrderItemStatus,
+  TmsSnapshotPayload,
+} from "./types";
 import { getApiBaseUrl } from "./storeContext";
 
 function buildUrl(path: string, query?: Record<string, string | number | undefined>): string {
@@ -40,16 +46,19 @@ export async function patchKdsLineStatus(
   xStoreId: string,
   lineId: number,
   status: OrderItemStatus,
-): Promise<unknown> {
+  quantity?: number,
+): Promise<KdsPatchLineResponse> {
+  const body: { status: OrderItemStatus; quantity?: number } = { status };
+  if (quantity !== undefined) body.quantity = quantity;
   const res = await fetch(buildUrl(`/kds/items/${lineId}/status`), {
     method: "PATCH",
     headers: {
       "X-Store-Id": xStoreId,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(body),
   });
-  return parseJson(res);
+  return parseJson<KdsPatchLineResponse>(res);
 }
 
 export async function fetchTmsSnapshot(xStoreId: string): Promise<TmsSnapshotPayload> {

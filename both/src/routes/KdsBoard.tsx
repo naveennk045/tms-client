@@ -6,13 +6,18 @@ import {
   kdsWebSocketUrl,
   patchKdsLineStatus,
 } from "../lib/api";
-import { nextOrderItemStatus, statusLabel } from "../lib/status";
+import {
+  lineIsFullyDone,
+  lineItemsNeedCollected,
+  lineItemsNeedReady,
+  statusLabel,
+} from "../lib/status";
 import {
   getXStoreIdHeaderValue,
   isStoreStillActive,
   readStoredStore,
 } from "../lib/storeContext";
-import type { KdsBoardPayload, KdsLine, WsEnvelope } from "../lib/types";
+import type { KdsBoardPayload, KdsLine, OrderItemStatus, WsEnvelope } from "../lib/types";
 
 const POLL_MS = 10_000;
 const DEFAULT_MAX_ROWS = 20;
@@ -85,6 +90,8 @@ export default function KdsBoard() {
           setBoard(msg.payload as KdsBoardPayload);
           setLoadError(null);
         } else if (msg.type === "BOARD_REFRESH" || msg.type === "ITEM_STATUS_CHANGED") {
+          const sid = (msg.payload as { store_id?: number } | undefined)?.store_id;
+          if (sid !== undefined && sid !== stored.storeId) return;
           void refetch();
         } else if (msg.type === "PING") {
           /* ignore */
@@ -111,14 +118,12 @@ export default function KdsBoard() {
     };
   }, [stored, forbidden, refetch]);
 
-  async function advanceLine(line: KdsLine) {
+  async function patchLine(lineId: number, status: OrderItemStatus, quantity?: number) {
     if (!stored) return;
-    const next = nextOrderItemStatus(line.order_status);
-    if (!next) return;
-    setLineBusy(line.id);
+    setLineBusy(lineId);
     setLoadError(null);
     try {
-      await patchKdsLineStatus(xStore, line.id, next);
+      await patchKdsLineStatus(xStore, lineId, status, quantity);
       await refetch();
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : "Update failed");
@@ -163,44 +168,32 @@ export default function KdsBoard() {
       <div className="kds-layout" style={layout}>
         <main style={mainCol}>
           {!board && !loadError && <p style={{ color: "var(--muted)" }}>Loading board…</p>}
-          {board && board.orders.length === 0 && (
+          {(board?.orders?.length ?? 0) === 0 && board && (
             <p style={{ color: "var(--muted)" }}>No tickets on the board.</p>
           )}
           <div style={ticketGrid}>
             {board?.orders.map((order) => (
               <article key={order.id} style={ticket}>
                 <div style={ticketHead}>
-                  <span style={kot}>{order.kot_code}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                    <span style={kot}>{order.kot_code}</span>
+                    {order.order_type && (
+                      <span style={orderTypeBadge(order.order_type)}>{orderTypeShort(order.order_type)}</span>
+                    )}
+                  </div>
                   <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
                     {new Date(order.created_at).toLocaleString()}
                   </span>
                 </div>
                 <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
-                  {order.lines.map((line) => {
-                    const next = nextOrderItemStatus(line.order_status);
-                    return (
-                      <li key={line.id} style={lineRow}>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{line.item_name}</div>
-                          <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
-                            ×{line.quantity} · {statusLabel(line.order_status)}
-                          </div>
-                        </div>
-                        {next ? (
-                          <button
-                            type="button"
-                            style={advanceBtn}
-                            disabled={lineBusy === line.id}
-                            onClick={() => void advanceLine(line)}
-                          >
-                            → {statusLabel(next)}
-                          </button>
-                        ) : (
-                          <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>Done</span>
-                        )}
-                      </li>
-                    );
-                  })}
+                  {order.lines.map((line) => (
+                    <KdsLineRow
+                      key={line.id}
+                      line={line}
+                      busy={lineBusy === line.id}
+                      onPatch={(status, qty) => void patchLine(line.id, status, qty)}
+                    />
+                  ))}
                 </ul>
               </article>
             ))}
@@ -231,6 +224,9 @@ export default function KdsBoard() {
           )}
           {board && (
             <p style={{ marginTop: "1rem", fontSize: "0.8rem", color: "var(--muted)" }}>
+              Clubbed totals = ordered volume across open lines (not “still cooking”). Use per-line kitchen counts
+              above.
+              <br />
               Window {board.live_window_minutes}m · max {board.max_rows} tickets
             </p>
           )}
@@ -306,4 +302,130 @@ const advanceBtn: CSSProperties = {
   background: "rgba(249, 171, 0, 0.12)",
   color: "var(--text)",
   whiteSpace: "nowrap",
+};
+
+function orderTypeShort(t: "DINEIN" | "TAKEAWAY"): string {
+  return t === "DINEIN" ? "Dine-in" : "Takeaway";
+}
+
+function orderTypeBadge(t: "DINEIN" | "TAKEAWAY"): CSSProperties {
+  return {
+    fontSize: "0.7rem",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    padding: "0.15rem 0.4rem",
+    borderRadius: 6,
+    border: "1px solid var(--border)",
+    color: t === "TAKEAWAY" ? "var(--prep)" : "var(--muted)",
+  };
+}
+
+function KdsLineRow({
+  line,
+  busy,
+  onPatch,
+}: Readonly<{
+  line: KdsLine;
+  busy: boolean;
+  onPatch: (status: OrderItemStatus, quantity?: number) => void;
+}>) {
+  const needReady = lineItemsNeedReady(line);
+  const needCollect = lineItemsNeedCollected(line);
+  const done = lineIsFullyDone(line);
+  const [readyQty, setReadyQty] = useState(needReady > 0 ? needReady : 1);
+  const [collectQty, setCollectQty] = useState(needCollect > 0 ? needCollect : 1);
+
+  useEffect(() => {
+    setReadyQty(needReady > 0 ? needReady : 1);
+    setCollectQty(needCollect > 0 ? needCollect : 1);
+  }, [needReady, needCollect, line.id]);
+
+  const clampReady = Math.min(Math.max(1, readyQty), Math.max(1, needReady));
+  const clampCollect = Math.min(Math.max(1, collectQty), Math.max(1, needCollect));
+
+  return (
+    <li style={lineRow}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 600 }}>{line.item_name}</div>
+        <div style={{ fontSize: "0.85rem", color: "var(--muted)" }}>
+          Ordered ×{line.quantity} · {statusLabel(line.order_status)}
+        </div>
+        {!done && (
+          <div style={{ fontSize: "0.8rem", marginTop: 4, color: "var(--muted)" }}>
+            Kitchen: <strong style={{ color: "var(--text)" }}>{needReady}</strong> · Counter:{" "}
+            <strong style={{ color: "var(--text)" }}>{needCollect}</strong>
+          </div>
+        )}
+        {line.order_status === "NOT_ACCEPTED" && (
+          <div style={{ marginTop: 8 }}>
+            <button type="button" style={advanceBtn} disabled={busy} onClick={() => onPatch("PREPARING")}>
+              Start preparing
+            </button>
+          </div>
+        )}
+        {needReady > 0 && line.order_status !== "NOT_ACCEPTED" && (
+          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
+            <label style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+              Ready qty{" "}
+              <input
+                type="number"
+                min={1}
+                max={needReady}
+                value={needReady > 0 ? clampReady : 1}
+                disabled={busy}
+                onChange={(e) => setReadyQty(Number(e.target.value))}
+                style={qtyInput}
+              />
+            </label>
+            <button
+              type="button"
+              style={advanceBtn}
+              disabled={busy}
+              onClick={() => onPatch("READY", clampReady === needReady ? undefined : clampReady)}
+            >
+              Mark ready
+            </button>
+          </div>
+        )}
+        {needCollect > 0 && line.order_status !== "NOT_ACCEPTED" && (
+          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: "0.4rem", alignItems: "center" }}>
+            <label style={{ fontSize: "0.8rem", color: "var(--muted)" }}>
+              Collect qty{" "}
+              <input
+                type="number"
+                min={1}
+                max={needCollect}
+                value={needCollect > 0 ? clampCollect : 1}
+                disabled={busy}
+                onChange={(e) => setCollectQty(Number(e.target.value))}
+                style={qtyInput}
+              />
+            </label>
+            <button
+              type="button"
+              style={{ ...advanceBtn, borderColor: "var(--ready)", background: "rgba(52, 168, 83, 0.12)" }}
+              disabled={busy}
+              onClick={() =>
+                onPatch("COLLECTED", clampCollect === needCollect ? undefined : clampCollect)
+              }
+            >
+              Mark collected
+            </button>
+          </div>
+        )}
+      </div>
+      {done && <span style={{ color: "var(--muted)", fontSize: "0.85rem", whiteSpace: "nowrap" }}>Done</span>}
+    </li>
+  );
+}
+
+const qtyInput: CSSProperties = {
+  width: "4.5rem",
+  marginLeft: 6,
+  padding: "0.25rem 0.35rem",
+  borderRadius: 6,
+  border: "1px solid var(--border)",
+  background: "var(--bg)",
+  color: "var(--text)",
 };
