@@ -46,3 +46,21 @@ select {
     position: static !important;
   }
 }
+
+/* TMS board line — bold keywords for TV legibility */
+.tms-token-line .tms-qty-wrap {
+  font-size: 0.78rem;
+  text-align: right;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.tms-qty-em {
+  font-weight: 800;
+  color: #f2f4f8;
+  letter-spacing: 0.03em;
+}
+
+.tms-token-line--pickup .tms-qty-em {
+  color: #062011;
+}

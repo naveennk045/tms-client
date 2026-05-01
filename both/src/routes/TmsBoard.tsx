@@ -5,7 +5,6 @@ import {
   lineItemsNeedCollected,
   lineItemsNeedReady,
   resolveTmsTokenFlags,
-  statusLabel,
 } from "../lib/status";
 import {
   getXStoreIdHeaderValue,
@@ -182,17 +181,16 @@ function TokenCard({ token, flash }: { token: TmsToken; flash: boolean }) {
           const needCollect = lineItemsNeedCollected(line);
           const pickupHighlight = needCollect > 0 || line.order_status === "READY";
           return (
-            <li key={line.id} style={lineStyle(line.order_status, pickupHighlight)}>
-              <span>
-                {line.item_name} ×{line.quantity}
-                {(needReady > 0 || needCollect > 0) && (
-                  <span style={{ display: "block", fontSize: "0.78rem", color: "var(--muted)", marginTop: 2 }}>
-                    Kitchen {needReady} · Counter {needCollect}
-                  </span>
-                )}
-              </span>
-              <span style={{ color: "var(--muted)", fontSize: "0.85rem" }}>
-                {statusLabel(line.order_status)}
+            <li
+              key={line.id}
+              className={pickupHighlight ? "tms-token-line tms-token-line--pickup" : "tms-token-line"}
+              style={lineStyle(line.order_status, pickupHighlight)}
+            >
+              <span>{line.item_name}</span>
+              <span className="tms-qty-wrap">
+                {needReady} <span className="tms-qty-em">PREPARING</span>
+                {" | "}
+                {needCollect} to <span className="tms-qty-em">COLLECT</span>
               </span>
             </li>
           );

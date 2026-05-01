@@ -5,7 +5,6 @@ import {
   lineItemsNeedCollected,
   lineItemsNeedReady,
   resolveTmsTokenFlags,
-  statusLabel,
 } from "../lib/status";
 import { getXStoreIdHeaderValue, readStoredStore } from "../lib/storeContext";
 import { primeSpeechSynthesis, speakTmsAnnouncement } from "../lib/speech";
@@ -217,16 +216,12 @@ function OrderTile({ token, flash }: Readonly<{ token: TmsToken; flash: boolean 
               key={line.id}
               className={`tms-tile__line ${pickupHighlight ? "tms-tile__line--ready" : ""}`}
             >
-              <span className="tms-tile__name">
-                {line.item_name}
-                {(needReady > 0 || needCollect > 0) && (
-                  <span className="tms-tile__counters">
-                    Kitchen {needReady} · Counter {needCollect}
-                  </span>
-                )}
+              <span className="tms-tile__name">{line.item_name}</span>
+              <span className="tms-tile__qty tms-tile__qty--split">
+                {needReady} <span className="tms-tile__qty-em">PREPARING</span>
+                {" | "}
+                {needCollect} to <span className="tms-tile__qty-em">COLLECT</span>
               </span>
-              <span className="tms-tile__qty">×{line.quantity}</span>
-              <span className="tms-tile__st">{statusLabel(line.order_status)}</span>
             </li>
           );
         })}

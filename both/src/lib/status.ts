@@ -1,5 +1,16 @@
 import type { KdsLine, OrderItemStatus, TmsLine, TmsTokenFlags } from "./types";
 
+/** Accepts JSON numbers and numeric strings from some backends. */
+export function readOptionalNonNegativeInt(value: unknown): number | undefined {
+  if (value === null || value === undefined) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.floor(value));
+  if (typeof value === "string" && value.trim() !== "") {
+    const n = Number(value);
+    if (Number.isFinite(n)) return Math.max(0, Math.floor(n));
+  }
+  return undefined;
+}
+
 const CHAIN: OrderItemStatus[] = [
   "NOT_ACCEPTED",
   "PREPARING",
@@ -32,7 +43,8 @@ export function statusLabel(s: OrderItemStatus): string {
 
 /** Infer counters when the API omits them (older backends). */
 export function lineItemsNeedReady(line: Pick<KdsLine | TmsLine, "quantity" | "order_status" | "items_need_be_ready">): number {
-  if (typeof line.items_need_be_ready === "number") return line.items_need_be_ready;
+  const explicit = readOptionalNonNegativeInt(line.items_need_be_ready);
+  if (explicit !== undefined) return explicit;
   if (line.order_status === "COLLECTED" || line.order_status === "READY") return 0;
   return line.quantity;
 }
@@ -40,7 +52,8 @@ export function lineItemsNeedReady(line: Pick<KdsLine | TmsLine, "quantity" | "o
 export function lineItemsNeedCollected(
   line: Pick<KdsLine | TmsLine, "quantity" | "order_status" | "items_need_be_collected">,
 ): number {
-  if (typeof line.items_need_be_collected === "number") return line.items_need_be_collected;
+  const explicit = readOptionalNonNegativeInt(line.items_need_be_collected);
+  if (explicit !== undefined) return explicit;
   if (line.order_status === "COLLECTED") return 0;
   if (line.order_status === "READY") return line.quantity;
   return 0;

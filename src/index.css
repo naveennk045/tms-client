@@ -471,7 +471,7 @@ button {
 
 .tms-tile__line {
   display: grid;
-  grid-template-columns: 1fr auto minmax(3.2rem, auto);
+  grid-template-columns: 1fr minmax(4.25rem, max-content);
   gap: 0.35rem 0.45rem;
   align-items: baseline;
   font-size: var(--font-sm);
@@ -509,15 +509,25 @@ button {
   font-weight: var(--font-weight-medium);
   color: var(--text-secondary);
   white-space: nowrap;
+  text-align: right;
 }
 
-.tms-tile__st {
-  font-size: 0.68rem;
+.tms-tile__qty--split {
+  white-space: normal;
+  font-size: var(--font-xs);
   font-weight: var(--font-weight-normal);
-  color: var(--muted);
-  text-transform: uppercase;
+  line-height: var(--line-height-tight);
+  max-width: 11rem;
+}
+
+.tms-tile__qty-em {
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
   letter-spacing: 0.02em;
-  text-align: right;
+}
+
+.tms-tile__line--ready .tms-tile__qty-em {
+  color: var(--gold-dark);
 }
 
 .tms-tile__line--ready .tms-tile__name {
@@ -525,7 +535,7 @@ button {
   font-weight: var(--font-weight-medium);
 }
 
-.tms-tile__line--ready .tms-tile__st {
+.tms-tile__line--ready .tms-tile__qty {
   color: var(--gold-dark);
 }
 
@@ -603,11 +613,15 @@ button {
 
 :root[data-browser="silk"] .tms-tile__line {
   font-size: 0.78rem;
-  grid-template-columns: 1fr auto minmax(2.75rem, auto);
+  grid-template-columns: 1fr minmax(3.5rem, max-content);
 }
 
-:root[data-browser="silk"] .tms-tile__st {
+:root[data-browser="silk"] .tms-tile__qty--split {
   font-size: 0.62rem;
+}
+
+:root[data-browser="silk"] .tms-tile__qty-em {
+  font-weight: 800;
 }
 
 :root[data-browser="silk"] .btn {
@@ -710,8 +724,13 @@ button {
     font-size: var(--font-base);
   }
 
-  .tms-tile__st {
+  .tms-tile__qty--split {
     font-size: 0.72rem;
+  }
+
+  .tms-tile__qty-em {
+    font-weight: 800;
+    font-size: 0.85em;
   }
 
   .btn {
