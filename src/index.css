@@ -517,7 +517,7 @@ button {
   font-size: var(--font-xs);
   font-weight: var(--font-weight-normal);
   line-height: var(--line-height-tight);
-  max-width: 11rem;
+  max-width: 13.5rem;
 }
 
 .tms-tile__qty-em {

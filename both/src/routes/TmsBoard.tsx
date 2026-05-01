@@ -190,7 +190,8 @@ function TokenCard({ token, flash }: { token: TmsToken; flash: boolean }) {
               <span className="tms-qty-wrap">
                 {needReady} <span className="tms-qty-em">PREPARING</span>
                 {" | "}
-                {needCollect} to <span className="tms-qty-em">COLLECT</span>
+                {needCollect}{" "}
+                <span className="tms-qty-em">READY for Pickup</span>
               </span>
             </li>
           );
