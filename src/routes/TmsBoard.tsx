@@ -221,7 +221,7 @@ function OrderTile({ token, flash }: Readonly<{ token: TmsToken; flash: boolean 
                 {needReady} <span className="tms-tile__qty-em">PREPARING</span>
                 {" | "}
                 {needCollect}{" "}
-                <span className="tms-tile__qty-em">READY for Pickup</span>
+                <span className="tms-tile__qty-em">READY FOR PICKUP</span>
               </span>
             </li>
           );
