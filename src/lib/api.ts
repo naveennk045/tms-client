@@ -1,4 +1,4 @@
-import type { KioskStoreRow, TmsSnapshotPayload } from "./types";
+import type { KioskStoreRow, MenuMetaPayload, TmsSnapshotPayload } from "./types";
 import { getApiBaseUrl } from "./storeContext";
 
 function buildUrl(path: string, query?: Record<string, string | number | undefined>): string {
@@ -31,6 +31,11 @@ export async function fetchTmsSnapshot(xStoreId: string): Promise<TmsSnapshotPay
     headers: { "X-Store-Id": xStoreId },
   });
   return parseJson<TmsSnapshotPayload>(res);
+}
+
+export async function fetchMenuMeta(): Promise<MenuMetaPayload> {
+  const res = await fetch(buildUrl("/tms/menu-meta"));
+  return parseJson<MenuMetaPayload>(res);
 }
 
 export function tmsEventSourceUrl(storeId: number): string {
