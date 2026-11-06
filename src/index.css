@@ -376,3 +376,5 @@ a.icon-btn { text-decoration: none; }
 .store-name { font-weight: 700; }
 .store-meta { color: var(--muted); font-size: 14px; }
 code { background: var(--glass-strong); border-radius: 6px; padding: 1px 6px; }
+.status-grid { position: relative; scrollbar-width: none; }
+.status-grid::-webkit-scrollbar { display: none; }

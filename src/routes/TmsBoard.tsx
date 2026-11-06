@@ -4,7 +4,7 @@ import { fetchMenuMeta, fetchTmsSnapshot, tmsEventSourceUrl } from "../lib/api";
 import { boardState, featuredItem, itemsText, lineIsReady, Menu, ordinal, ts, type CardState } from "../lib/board";
 import { shortKot, tokenNumber } from "../lib/status";
 import { getXStoreIdHeaderValue, readStoredStore } from "../lib/storeContext";
-import { primeSpeechSynthesis, speakTmsAnnouncement } from "../lib/speech";
+import { announceToken, primeSpeechSynthesis, speakTmsAnnouncement, type AnnounceLang } from "../lib/speech";
 import type {
   MenuMetaPayload,
   TmsAnnouncePayload,
@@ -25,6 +25,22 @@ const SPOT_ROTATE_MS = 14000;
 const SPOT_BUSY_MS = 25000;
 const MILESTONE_MS = 7500;
 const IDLE_REEL_MS = 60000;
+const REMINDER_MS = 2 * 60 * 1000;
+const REFETCH_DEBOUNCE_MS = 250;
+const PAGE_MS = 8000;
+const LANG_KEY = "ktr_tms_announce_lang";
+const LANG_LABEL: Record<AnnounceLang, string> = { en: "English", hi: "हिंदी", both: "English + हिंदी" };
+const LANG_NEXT: Record<AnnounceLang, AnnounceLang> = { en: "both", both: "hi", hi: "en" };
+
+function readLang(): AnnounceLang {
+  try {
+    const v = localStorage.getItem(LANG_KEY);
+    if (v === "en" || v === "hi" || v === "both") return v;
+  } catch {
+    // storage blocked
+  }
+  return "en";
+}
 
 type Filter = "all" | "making" | "ready";
 
@@ -62,12 +78,19 @@ export default function TmsBoard() {
   const [filter, setFilter] = useState<Filter>("all");
   const [find, setFind] = useState("");
   const [modalId, setModalId] = useState<string | null>(null);
+  const [lang, setLang] = useState<AnnounceLang>(readLang);
+  const [page, setPage] = useState({ cur: 1, total: 1 });
 
   const menu = useMemo(() => new Menu(meta), [meta]);
   const menuRef = useRef(menu);
   menuRef.current = menu;
   const voiceRef = useRef(false);
   voiceRef.current = voiceEnabled;
+  const langRef = useRef(lang);
+  langRef.current = lang;
+  const reminders = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const refetchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const offsetRef = useRef(0);
   const prevRef = useRef<Map<string, Prev> | null>(null);
   const seq = useRef(0);
@@ -117,6 +140,28 @@ export default function TmsBoard() {
       false,
     );
   }, [showSpot]);
+
+  /** Calls a ready token once more if it is still waiting at the counter after two minutes. */
+  const scheduleReminder = useCallback(
+    (orderId: string, num: string) => {
+      if (reminders.current.has(orderId)) return;
+      const t = globalThis.setTimeout(() => {
+        reminders.current.delete(orderId);
+        if (prevRef.current?.get(orderId)?.state !== "ready") return;
+        pushToast({ token: num, tone: "ready", title: `Token ${num}, a gentle reminder`, body: "Your order is waiting at the counter. Please collect it while it's hot!" });
+        if (voiceRef.current) {
+          announceToken(num, `Token ${num}, just a gentle reminder. Your food is waiting for you at the counter. Please collect it while it's hot!`, langRef.current, true);
+        }
+      }, REMINDER_MS);
+      reminders.current.set(orderId, t);
+    },
+    [pushToast],
+  );
+
+  useEffect(() => {
+    const timers = reminders.current;
+    return () => timers.forEach((t) => globalThis.clearTimeout(t));
+  }, []);
 
   /* ---------- snapshot diffing ---------- */
 
@@ -190,6 +235,7 @@ export default function TmsBoard() {
             title: `Token ${num} is ready`,
             body: `Please collect ${itemsText(cur.token)} at the counter.`,
           });
+          scheduleReminder(id, num);
         }
       }
 
@@ -206,7 +252,7 @@ export default function TmsBoard() {
       flash(setChanged, changedIds);
       flash(setJustReady, readyLineIds);
     },
-    [flash, pushToast, showSpot],
+    [flash, pushToast, showSpot, scheduleReminder],
   );
 
   const loadSnapshot = useCallback(async () => {
@@ -217,6 +263,15 @@ export default function TmsBoard() {
       setError(e instanceof Error ? e.message : "Failed to load snapshot");
     }
   }, [stored, xStore, applySnapshot]);
+
+  /** Bursts of kitchen events collapse into one fetch; the server caches the snapshot per change. */
+  const scheduleRefetch = useCallback(() => {
+    if (refetchTimer.current) globalThis.clearTimeout(refetchTimer.current);
+    refetchTimer.current = globalThis.setTimeout(() => {
+      refetchTimer.current = null;
+      void loadSnapshot();
+    }, REFETCH_DEBOUNCE_MS);
+  }, [loadSnapshot]);
 
   useEffect(() => {
     void loadSnapshot();
@@ -245,13 +300,14 @@ export default function TmsBoard() {
 
       if (msg.type === "SNAPSHOT" && msg.payload && typeof msg.payload === "object" && "tokens" in msg.payload) {
         applySnapshot(msg.payload as TmsSnapshotPayload);
-      } else if (msg.type === "BOARD_REFRESH" || msg.type === "ITEM_STATUS_CHANGED") {
-        void loadSnapshot();
+      } else if (msg.type === "BOARD_REFRESH") {
+        // ITEM_STATUS_CHANGED is always followed by BOARD_REFRESH, so only that one refetches.
+        scheduleRefetch();
       } else if (msg.type === "TMS_ANNOUNCE") {
         const p = msg.payload as TmsAnnouncePayload;
         const num = shortKot(p.kot_code);
         pushToast({ token: num, tone: "ready", title: `Calling token ${num}`, body: "Please collect your order at the counter." }, 6000);
-        if (voiceRef.current && p.speech) speakTmsAnnouncement(p.speech);
+        if (voiceRef.current && p.speech) announceToken(num, p.speech, langRef.current);
       } else if (msg.type === "TMS_MILESTONE") {
         const p = msg.payload as TmsMilestonePayload;
         setServedMs((m) => new Map(m).set(p.order_id, `${ordinal(p.n)} ${p.one} served`));
@@ -260,15 +316,16 @@ export default function TmsBoard() {
         if (voiceRef.current) {
           speakTmsAnnouncement(
             `Celebration time! That's our ${ordinal(p.n)} ${p.one} served today, and it went to token ${p.token_number}. Thank you, Versova!`,
+            true,
           );
         }
       }
     };
     es.onerror = () => {
-      void loadSnapshot();
+      scheduleRefetch();
     };
     return () => es.close();
-  }, [stored, applySnapshot, loadSnapshot, pushToast]);
+  }, [stored, applySnapshot, scheduleRefetch, pushToast]);
 
   /* ---------- timers ---------- */
 
@@ -299,6 +356,38 @@ export default function TmsBoard() {
     }, 5000);
     return () => globalThis.clearInterval(t);
   }, [meta]);
+
+  /* ---------- auto-page when cards overflow the lane ---------- */
+
+  const syncPage = useCallback(() => {
+    const g = gridRef.current;
+    if (!g) return;
+    const total = Math.max(1, Math.ceil((g.scrollHeight - 1) / g.clientHeight));
+    const cur = Math.min(total, Math.floor((g.scrollTop + 1) / g.clientHeight) + 1);
+    setPage((p) => (p.cur === cur && p.total === total ? p : { cur, total }));
+  }, []);
+
+  useEffect(() => {
+    const t = globalThis.setInterval(() => {
+      const g = gridRef.current;
+      if (!g || find.trim() || modalId) return;
+      if (g.scrollHeight <= g.clientHeight + 4) {
+        if (g.scrollTop) g.scrollTo({ top: 0 });
+        return;
+      }
+      // Next page starts at the first card cut off by the bottom edge, so cards never split.
+      const viewBottom = g.scrollTop + g.clientHeight;
+      const slots = Array.from(g.querySelectorAll<HTMLElement>(".tk-slot"));
+      const next = slots.find((el) => el.offsetTop + el.offsetHeight > viewBottom + 1);
+      const top = next && next.offsetTop > g.scrollTop + 1 ? next.offsetTop - 4 : 0;
+      g.scrollTo({ top, behavior: "smooth" });
+    }, PAGE_MS);
+    return () => globalThis.clearInterval(t);
+  }, [find, modalId]);
+
+  useEffect(() => {
+    syncPage();
+  });
 
   const closeReel = useCallback(() => {
     lastOrderAt.current = Date.now();
@@ -340,7 +429,11 @@ export default function TmsBoard() {
   const cards = useMemo(() => {
     const live = (snapshot?.tokens ?? []).map((t) => ({ token: t, state: boardState(t) as CardState, doneAt: undefined as number | undefined }));
     const done = finishing.map((f) => ({ token: f.token, state: "done" as CardState, doneAt: f.doneAt }));
-    return [...live, ...done].sort((a, b) => (ts(a.token.created_at) ?? 0) - (ts(b.token.created_at) ?? 0));
+    // Ready tokens lead so they are always on the first page of a busy board.
+    const rank: Record<CardState, number> = { ready: 0, partial: 1, cooking: 2, received: 2, done: 3 };
+    return [...live, ...done].sort(
+      (a, b) => rank[a.state] - rank[b.state] || (ts(a.token.created_at) ?? 0) - (ts(b.token.created_at) ?? 0),
+    );
   }, [snapshot, finishing]);
 
   const query = find.trim();
@@ -361,7 +454,13 @@ export default function TmsBoard() {
   });
   const making = cards.filter((c) => c.state === "received" || c.state === "cooking" || c.state === "partial").length;
   const readyCount = cards.filter((c) => c.state === "ready").length;
-  const hint = [making ? `${making} being made` : "", readyCount ? `${readyCount} ready` : ""].filter(Boolean).join(" · ");
+  const hint = [
+    making ? `${making} being made` : "",
+    readyCount ? `${readyCount} ready` : "",
+    page.total > 1 ? `Page ${page.cur} of ${page.total}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const stats = snapshot?.stats;
   const modalCard = modalId ? cards.find((c) => c.token.order_id === modalId) : undefined;
 
@@ -403,6 +502,24 @@ export default function TmsBoard() {
             <SoundIcon />
             {voiceEnabled ? "Announcements on" : "Announcements"}
           </button>
+          {voiceEnabled && (
+            <button
+              className="icon-btn"
+              type="button"
+              title="Announcement language"
+              onClick={() => {
+                const next = LANG_NEXT[lang];
+                setLang(next);
+                try {
+                  localStorage.setItem(LANG_KEY, next);
+                } catch {
+                  // storage blocked
+                }
+              }}
+            >
+              {LANG_LABEL[lang]}
+            </button>
+          )}
           {!isFullscreen && (
             <button className="icon-btn" type="button" onClick={() => void requestFullscreen()}>
               <FullscreenIcon />
@@ -461,7 +578,7 @@ export default function TmsBoard() {
               {query && !foundId && <span className="tk-find-miss">Not on the board</span>}
             </label>
           </div>
-          <div className="status-grid">
+          <div className="status-grid" ref={gridRef} onScroll={syncPage}>
             {snapshot === null && <p className="empty">Loading tokens…</p>}
             {snapshot !== null && visible.length === 0 && (
               <p className="empty">
