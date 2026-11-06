@@ -1,4 +1,4 @@
-import type { OrderItemStatus, TmsLine, TmsTokenFlags } from "./types";
+import type { OrderItemStatus, TmsLine, TmsToken, TmsTokenFlags } from "./types";
 
 /** Accepts JSON numbers and numeric strings from some backends. */
 export function readOptionalNonNegativeInt(value: unknown): number | undefined {
@@ -60,3 +60,12 @@ export function tmsTokenFlagsFromLines(lines: TmsLine[]): TmsTokenFlags {
 export function resolveTmsTokenFlags(lines: TmsLine[], flags?: TmsTokenFlags): TmsTokenFlags {
   return flags ?? tmsTokenFlagsFromLines(lines);
 }
+
+export function tokenNumber(token: Pick<TmsToken, "kot_code" | "token_number">): string {
+  return token.token_number ?? shortKot(token.kot_code);
+}
+
+export function shortKot(kotCode: string): string {
+  return kotCode.startsWith("KTR-") ? kotCode.slice(4) : kotCode;
+}
+
