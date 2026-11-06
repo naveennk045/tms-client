@@ -116,15 +116,11 @@ export function MilestoneFlash({ ev, onClose }: Readonly<{ ev: TmsMilestonePaylo
   );
 }
 
-/* ---------- Idle story reel ---------- */
+/* ---------- Story reel (only while the board is empty) ---------- */
 
 const REEL_MS = 8000;
 
-export function StoryReel({
-  slides,
-  readyTokens,
-  onClose,
-}: Readonly<{ slides: MenuMetaReelSlide[]; readyTokens: string[]; onClose: () => void }>) {
+export function StoryReel({ slides, onClose }: Readonly<{ slides: MenuMetaReelSlide[]; onClose: () => void }>) {
   const [i, setI] = useState(0);
   useEffect(() => {
     const t = globalThis.setTimeout(() => setI((n) => (n + 1) % slides.length), REEL_MS);
@@ -165,14 +161,6 @@ export function StoryReel({
         <span className="cta">
           Order at the kiosk. <b>Watch this screen</b> for your token.
         </span>
-        {readyTokens.length > 0 && (
-          <span className="reel-ready">
-            Ready now:
-            {readyTokens.slice(0, 8).map((t) => (
-              <span key={t}>{t}</span>
-            ))}
-          </span>
-        )}
       </div>
     </div>
   );
