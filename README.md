@@ -23,7 +23,7 @@ chime and voice (browsers need one tap after every restart).
   kitchen stage, timers, progress, and tags like *50th order of the day* or *Karnataka classic*
 - **Spotlight**: "Just ordered" dish story for new tokens, otherwise a rotating house favourite
 - **Live moments**: toasts, ready flip with confetti, 2-minute pickup reminder, "100th filter coffee
-  served" celebration, idle story reel, fact ticker
+  served" celebration, story reel when no tokens are on the board, fact ticker
 - **Interactive**: All / Being made / Ready filters, Find my token, tap a card for its timeline
 - **Busy hours**: auto-pages every 8 s with ready tokens first
 - **Voice**: chime, Indian English voice, English / Hindi / both

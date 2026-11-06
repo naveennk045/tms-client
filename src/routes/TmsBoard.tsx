@@ -24,7 +24,8 @@ const TOAST_MS = 9000;
 const SPOT_ROTATE_MS = 14000;
 const SPOT_BUSY_MS = 25000;
 const MILESTONE_MS = 7500;
-const IDLE_REEL_MS = 60000;
+// The story reel only plays while no token is on the board, after this grace period.
+const REEL_DELAY_MS = 15000;
 const REMINDER_MS = 2 * 60 * 1000;
 const REFETCH_DEBOUNCE_MS = 250;
 const PAGE_MS = 8000;
@@ -75,6 +76,7 @@ export default function TmsBoard() {
   const [spot, setSpot] = useState<SpotlightContent | null>(null);
   const [milestones, setMilestones] = useState<TmsMilestonePayload[]>([]);
   const [reelOpen, setReelOpen] = useState(false);
+  const [reelNonce, setReelNonce] = useState(0);
   const [filter, setFilter] = useState<Filter>("all");
   const [find, setFind] = useState("");
   const [modalId, setModalId] = useState<string | null>(null);
@@ -96,7 +98,6 @@ export default function TmsBoard() {
   const seq = useRef(0);
   const spotBusyUntil = useRef(0);
   const spotIdx = useRef(0);
-  const lastOrderAt = useRef(Date.now());
 
   /* ---------- helpers that animate one-off moments ---------- */
 
@@ -192,8 +193,6 @@ export default function TmsBoard() {
         const num = tokenNumber(cur.token);
         if (!before) {
           freshIds.push(id);
-          lastOrderAt.current = Date.now();
-          setReelOpen(false);
           const feature = featuredItem(cur.token, menuRef.current);
           pushToast({
             token: num,
@@ -349,13 +348,15 @@ export default function TmsBoard() {
     return () => globalThis.clearTimeout(t);
   }, [currentMilestone, dismissMilestone]);
 
+  const boardEmpty = snapshot !== null && snapshot.tokens.length === 0 && finishing.length === 0;
   useEffect(() => {
-    if ((meta?.reel.length ?? 0) === 0) return;
-    const t = globalThis.setInterval(() => {
-      if (Date.now() - lastOrderAt.current > IDLE_REEL_MS) setReelOpen(true);
-    }, 5000);
-    return () => globalThis.clearInterval(t);
-  }, [meta]);
+    if (!boardEmpty || (meta?.reel.length ?? 0) === 0) {
+      setReelOpen(false);
+      return;
+    }
+    const t = globalThis.setTimeout(() => setReelOpen(true), REEL_DELAY_MS);
+    return () => globalThis.clearTimeout(t);
+  }, [boardEmpty, meta, reelNonce]);
 
   /* ---------- auto-page when cards overflow the lane ---------- */
 
@@ -389,9 +390,10 @@ export default function TmsBoard() {
     syncPage();
   });
 
+  /** Tapping the reel shows the (empty) board; it comes back after the grace period. */
   const closeReel = useCallback(() => {
-    lastOrderAt.current = Date.now();
     setReelOpen(false);
+    setReelNonce((n) => n + 1);
   }, []);
 
   /* ---------- fullscreen (Silk TV browser asks on first touch) ---------- */
@@ -621,7 +623,6 @@ export default function TmsBoard() {
       {reelOpen && !currentMilestone && meta && (
         <StoryReel
           slides={meta.reel}
-          readyTokens={cards.filter((c) => c.state === "ready").map((c) => tokenNumber(c.token))}
           onClose={closeReel}
         />
       )}
